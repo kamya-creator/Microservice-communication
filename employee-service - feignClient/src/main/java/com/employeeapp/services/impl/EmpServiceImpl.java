@@ -1,6 +1,7 @@
 package com.employeeapp.services.impl;
 
 import com.employeeapp.entity.Employee;
+import com.employeeapp.feignClient.AddressFeignClient;
 import com.employeeapp.modelMapper.AddressResponse;
 import com.employeeapp.modelMapper.EmployeeResponse;
 import com.employeeapp.repository.EmpRepo;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.stereotype.Service;
 import org.modelmapper.ModelMapper;
 import org.springframework.web.client.RestTemplate;
@@ -24,21 +26,8 @@ public class EmpServiceImpl implements EmpService {
 
      @Autowired
     private ModelMapper modelMapper;
-
-
-    RestTemplate restTemplate ;
-
-    // read value from application.prop
-   // @Value("${address.service.baseURL}")
-    //private String BaseURL;
-
-    public EmpServiceImpl(@Value("${address.service.baseURL}") String BaseURL, RestTemplateBuilder restTemplateBuilder)
-    {
-        this.restTemplate =restTemplateBuilder
-                                    .rootUri(BaseURL)
-                                    .build();
-
-    }
+     @Autowired
+    AddressFeignClient addressFeignClient;
 
     @Override
     public EmployeeResponse getEmployeeByID(Integer id)
@@ -46,7 +35,8 @@ public class EmpServiceImpl implements EmpService {
         Optional<Employee> employee = repo.findById(id);
         EmployeeResponse employeeResponse = modelMapper.map(employee, EmployeeResponse.class);
 
-        addressResponse=restTemplate.getForObject("/address/{id}",AddressResponse.class,id);
+        // calling address-service through FeignClient
+        addressResponse= addressFeignClient.getAddressByEmployeeId(id).getBody();
 
         employeeResponse.setAddressResponse(addressResponse);
         return  employeeResponse;
